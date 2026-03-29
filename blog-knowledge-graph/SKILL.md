@@ -1,13 +1,15 @@
 ---
-name: wordpress-travel-knowledge-graph
-description: "Build an interactive knowledge graph from a WordPress travel blog. Use when the user wants to visualize connections between travel articles, places, activities, wildlife, and food across a blog. Handles multilingual blogs (e.g. WPGlobus EN/ZH), scrapes article content, extracts named entities, and produces a standalone interactive D3.js HTML graph with language switching. Trigger on: 'build a knowledge graph from my blog', 'visualize my travel posts', 'map connections between articles', or any request combining WordPress + knowledge graph."
+name: blog-knowledge-graph
+description: "Build an interactive knowledge graph from a WordPress travel blog. Use when the user wants to visualize connections between travel articles, places, activities, wildlife, and food across a blog.
 ---
 
 # WordPress Travel Blog — Knowledge Graph
 
 ## Overview
 
-Builds a standalone interactive D3.js force-directed knowledge graph from a WordPress travel blog. Scrapes article content, extracts entities (places, activities, wildlife, food), and renders two fully independent graphs for multilingual blogs (EN + ZH), switchable via a toggle.
+Builds a standalone interactive D3.js force-directed knowledge graph from a WordPress travel blog, all posts in 'Travelog' category of wordpress website https://wavelet.me/. 
+
+Scrapes article content, extracts entities (places, activities, wildlife, food), and renders two fully independent graphs for multilingual blogs (EN + ZH), switchable via a toggle.
 
 ## Quick Reference
 
@@ -34,11 +36,12 @@ These rules are absolute and must never be violated:
 4. **All posts in the category must be crawled.** The graph is only complete when every post in the target category (`/category/travelog/`) has been individually fetched and its content extracted. Partial crawls produce incomplete graphs — clearly mark which posts have and have not been crawled.
 
 ---
+
 ## Functions
 
 - Type filter toggles (country / place / article / wildlife / food / activity)
 - Text search (EN + ZH)
-- Highlight-on-click (show neighborhood)
+- Highlight-on-click (show neighborhoods and links to neighbors)
 - Language toggle (EN / 中文)
 - Zoom + pan + drag
 - Tooltip on hover
@@ -139,6 +142,12 @@ The ZH graph uses entity names **as they appear in the Chinese article text**, n
 ### Source of truth
 Always defer to how the website's own Chinese articles refer to the place. Scrape the ZH article body and use whatever name appears there — don't invent translations.
 
+### Node Merge
+Nodes that refer to the same entity under different names (e.g. "Tórshavn" and "Thor's Harbor" → same place) should be merged.
+
+
+
+
 ---
 
 ## Step 5 — Graph Architecture
@@ -183,6 +192,10 @@ Relationship types (not labeled on edges, encoded implicitly by node types):
 - `article → food` — post mentions this food/restaurant
 - `place → country` — place is located in country
 - `place → place` — place is part of / near another place
+
+### Error checking
+
+- Every node should have at least one link to the Article node. The article node should have at least one link to the Country node.
 
 ---
 
@@ -238,16 +251,6 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Noto
 | collision radius | < size+5 — nodes overlap | size+18 to size+22 | > size+40 — too sparse |
 
 Key insight: low link strength + high charge = nodes spread out naturally and stay where dragged.
-
----
-
-## Step 9 — Scaling to More Posts
-
-When expanding beyond 20 posts:
-
-- **Node pruning**: consider hiding degree-1 leaf nodes (only 1 connection) — they add visual noise without insight
-- **Entity deduplication**: merge nodes that refer to the same entity under different names (e.g. "Tórshavn" and "Thor's Harbor" → same place)
-
 
 ---
 
