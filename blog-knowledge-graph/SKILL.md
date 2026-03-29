@@ -21,59 +21,63 @@ Builds a standalone interactive D3.js force-directed knowledge graph from a Word
 
 ---
 
-## Step 1 — Discover Posts
+## Hard Rules — Data Integrity
 
-Fetch the blog's category listing pages **only to collect post URLs and titles**. Do NOT extract article content from listing pages — listing pages render full post bodies inline, making them large and slow. Content extraction happens in Step 2, one post at a time.
+These rules are absolute and must never be violated:
+
+1. **Every node must come from a crawled post.** A node may only be added to the graph after fetching that post's own URL and reading its body content. No exceptions.
+
+2. **Never use the nav menu as a data source.** WordPress listing pages return full HTML including a header nav with links like `/places/africa/travel-uganda/`. These are WordPress **pages** (static content), not **posts**. Ignore the entire nav, sidebar, and footer — they must never produce nodes, titles, countries, places, or any other graph data.
+
+3. **Never infer or fabricate.** Do not guess entity names, article titles, or relationships from: nav menus, sidebar widgets, session summaries, prior conversation context, or any source other than the crawled post body.
+
+4. **All posts in the category must be crawled.** The graph is only complete when every post in the target category (`/category/travelog/`) has been individually fetched and its content extracted. Partial crawls produce incomplete graphs — clearly mark which posts have and have not been crawled.
+
+---
+## Functions
+
+- Type filter toggles (country / place / article / wildlife / food / activity)
+- Text search (EN + ZH)
+- Highlight-on-click (show neighborhood)
+- Language toggle (EN / 中文)
+- Zoom + pan + drag
+- Tooltip on hover
+- Cross-destination edges as dashed red lines
+- Single click the article nodes, highlight-neighborhood nodes; Double click on an article node, opens the blog post in a new tab.
+
+---
+
+## Step 1 — Crawl All Posts via Listing Pages
+
+WordPress category listing pages render full post content inline — each page contains ~8 complete articles. This means the listing pages themselves are the content source. There is no need for a separate URL collection phase.
+
+Fetch each listing page without a token limit and extract entities directly from all posts on that page:
 
 ```
-GET https://{domain}/category/travelog/
-GET https://{domain}/category/travelog/page/2/
+GET https://{domain}/category/travelog/           (no token limit)
+GET https://{domain}/category/travelog/page/2/    (no token limit)
 ... paginate until no "next page" link
 ```
 
-From each listing page, extract only:
-- Post URL (slug)
-- Post title (EN)
-- Post date / year
+From each listing page, for each post in the main content area extract:
+- Post title and URL
+- All complete content of posts.
 
-**Stop there.** Do not read or use article body text from listing pages.
+**Ignore everything outside the main content area** — nav, sidebar, footer, recent posts widget.
 
-For the ZH graph, also fetch:
+For the ZH graph, repeat the same pagination:
 ```
-GET https://{domain}/zh/category/travelog/
+GET https://{domain}/zh/category/travelog/        (no token limit)
+GET https://{domain}/zh/category/travelog/page/2/ (no token limit)
 ```
-Extract only ZH post titles and URLs. If a post appears with a Chinese title, it is a candidate for real translation.
 
 ### Rate limiting
 
-The site rate-limits aggressive crawling. Follow these rules:
-
-- **Listing pages**: use `text_content_token_limit: 2000` — enough to capture all post titles and URLs on the page without downloading full article bodies.
-- **Individual post pages** (Step 2): do NOT set `text_content_token_limit` — full content is needed for entity extraction.
-- **Batch fetches across turns** — fetch 3–4 listing pages per conversation turn, not all 21 in one burst. The `web_fetch` tool has a rate limit of 100 non-cached requests per hour per conversation.
-- If a fetch fails or returns an error, wait and retry in the next turn rather than immediately retrying in a loop.
-- For ZH translation detection (body comparison), fetch EN and ZH versions of the same post in the same turn to keep requests grouped logically.
-
-```
-// Good workflow
-Turn 1: listing pages 1–4  → collect URLs only (token_limit: 2000)
-Turn 2: listing pages 5–8  → collect URLs only
-...
-Turn N: fetch individual posts → extract entities (no token limit)
-
-// Bad — reading article content from listing pages
-fetch(listing/page/1) → read all article bodies  ← WRONG, wasteful
-```
-
-### What counts as "post discovery"
-Only add a post to the graph after fetching the post's own URL and reading its content. Never infer article titles, places, or entities from:
-- Navigation menus
-- Sidebar widgets
-- Category/tag pages
-- The session summary or prior conversation context
-
-If a destination appears in the nav menu but no post has been fetched for it, it does not exist in the graph yet.
-
+- **No token limit** on listing pages — full content is needed for entity extraction
+- **Batch across turns**: fetch 3–4 listing pages per turn to stay under the 100 requests/hour limit
+- If a fetch fails, retry in the next turn rather than immediately
+- Build the graph once after all listing pages have been crawled — do not rebuild incrementally
+- The purpose is not to build the graph fast, you can spread the fetch into hours, the key is to build the graph completely and correctly.
 ---
 
 ## Step 2 — Detect Real ZH Translations (WPGlobus)
@@ -188,12 +192,12 @@ Node sizes encode importance. Use these baselines:
 
 | Node Type | Base size | High-frequency hubs |
 |-----------|-----------|---------------------|
-| `article` | 15 | 15 (all articles equal) |
-| `country` | 22–30 | 30 for most-visited (Faroe, Greenland, Tanzania, Antarctica) |
-| `place` | 11–20 | Scale by how many articles reference it |
-| `activity` | 13–24 | Hiking/Photography are highest (24/22) |
-| `wildlife` | 11–22 | Icebergs/Penguins highest (22/20) |
-| `food` | 10–18 | Seafood highest (18) |
+| Country/Region | 30–56 | Primary hub, trip organizer |
+| Wildlife | 11–22 | Thematic clusters |
+| Place | 11–20 | Geographic sub-nodes |
+| Activity | 12–26 | Only distinctive ones |
+| Article | 14 | Leaf nodes |
+| Food | 11–16 | Specific restaurants/cuisines |
 
 ---
 
@@ -224,24 +228,6 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Noto
 
 ## Step 8 — Force Simulation Parameters
 
-Use loose parameters so nodes can be dragged freely without snapping back:
-
-```javascript
-d3.forceSimulation(nodes)
-  .force('link', d3.forceLink(links).id(d => d.id)
-    .distance(d => {
-      if (src.type==='article' && tgt.type==='country') return 190;
-      if (src.type==='country' || tgt.type==='country') return 210;
-      return 130;
-    })
-    .strength(0.28))                                    // MEDIUM-LOW — forms clusters but stays draggable
-  .force('charge', d3.forceManyBody()
-    .strength(d => -500 - d.size * 9))                 // HIGH repulsion — spread out
-  .force('center', d3.forceCenter(W/2, H/2)
-    .strength(0.025))                                   // WEAK center pull
-  .force('collision', d3.forceCollide(d => d.size + 20))
-```
-
 ### Tuning guide
 
 | Parameter | Too tight (bad) | Target | Too loose (bad) |
@@ -255,38 +241,13 @@ Key insight: low link strength + high charge = nodes spread out naturally and st
 
 ---
 
-## Step 9 — Interaction
-
-### Hover highlight
-On `mouseenter`, highlight the hovered node and its direct neighbors; dim everything else:
-
-```javascript
-node.classed('hi',  n => n.id === d.id)
-node.classed('dim', n => n.id !== d.id && !neighbors.has(n.id))
-link.classed('dim', l => l.source.id !== d.id && l.target.id !== d.id)
-```
-
-### Drag
-Standard D3 drag — set `fx/fy` on drag, clear on end. Node stays where dropped.
-
-### Zoom/pan
-```javascript
-svg.call(d3.zoom().scaleExtent([0.15, 5]).on('zoom', e => g.attr('transform', e.transform)))
-```
-
-### Tooltip
-Show on hover: node type, label, connection count. Position follows mouse.
-
----
-
-## Step 10 — Scaling to More Posts
+## Step 9 — Scaling to More Posts
 
 When expanding beyond 20 posts:
 
 - **Node pruning**: consider hiding degree-1 leaf nodes (only 1 connection) — they add visual noise without insight
 - **Entity deduplication**: merge nodes that refer to the same entity under different names (e.g. "Tórshavn" and "Thor's Harbor" → same place)
-- **Edge type differentiation**: with denser graphs, consider encoding relationship type via edge style (solid/dashed) or color
-- **Hierarchical grouping**: islands/sub-locations can be collapsed into parent region nodes, expandable on click
+
 
 ---
 
