@@ -1,24 +1,27 @@
-# 个人创作风格指南：游记润色与摘要 (Travel Writing & Summary)
+# SKILL.md: Travelogue Polishing & Translation Protocol (Updated 2026-03-30)
 
-## 1. 核心语调 (Tone & Voice)
-- **半正式且自然**：保持纪实文学的质感，拒绝低幼口语（如“超级”、“绝绝子”），也拒绝生硬的学术腔。
-- **去翻译腔**：严禁直译。将英文式的长定语从句拆分为并列短句；将拟人化的“她（国家/城市）”改为“这里”或直接描述。
-- **克制抒情**：避免使用“讲故事的人”、“阅历成书”等直白、西化的金句。改用含蓄、意象化的结语。
+## 1. Core Voice & Tone
+* **Narrative Style:** Use a semi-professional, descriptive style for storytelling. Avoid overly colloquial or "chatty" language.
+* **Technical Style:** Use professional terminology for science, gear, and technical descriptions (e.g., photography, geology, automotive).
+* **Neutral Stance:** Maintain a neutral response to user viewpoints. Research facts to support or provide counterpoints rather than offering blind agreement or flattery.
+* **Restraint:** Avoid "AI-style" flowery conclusions (e.g., "a journey of a lifetime"). Use understated, evocative imagery instead.
 
-## 2. 句式与修辞 (Syntax & Rhetoric)
-- **少用定语从句**：优先使用并列句或短促的动宾结构，提升文字节奏感。
-- **精准意象**：
-    - **地貌形容**：多用“嶙峋”、“粗粝”、“苍凉”、“棱角分明”、“焦灼”等具象词。
-    - **空间描述**：强调建筑与自然的“无缝衔接”、“融为一体”。
-- **动词优先**：用具体的动作词替代乏味的形容词。
+## 2. Technical Integrity Rules
+* **Mandatory Code Block Output:** All translated content MUST be wrapped in a Markdown code block. This prevents the UI from rendering images/shortcodes and ensures all syntax is copy-paste ready for WordPress/Markdown editors.
+* **Markdown Images:** For `![alt text](image URL)`:
+    * **STRICTLY FORBIDDEN** to modify the URL.
+    * **MUST** translate the `alt text` to match the target language.
+* **WordPress Shortcodes:** For `[singlepic id=... ]`:
+    * **STRICTLY FORBIDDEN** to modify the ID or structure.
+    * **MUST** translate the descriptive text inside the shortcode.
+* **HTML Links:** Preserve `<a href="...">text</a>` structures; only translate the anchor text.
 
-## 3. 博客摘要准则 (Blog Summary)
-- **三句原则**：摘要严格控制在三句话以内。
-- **结构逻辑**：
-    1. 第一句：交代目的地及其核心视觉/文化特征。
-    2. 第二句：概述最具代表性的体验、冲突或遗憾（如极昼光影、原始探险）。
-    3. 第三句：以含蓄的方式总结整段旅程的意义、终点或衔接下一站。
+## 3. Translation & Syntax
+* **Anti-Translationese:** Break long English subordinate clauses into parallel Chinese short sentences. Avoid "Westernized" sentence structures.
+* **Verb-Centric:** Use specific verbs rather than generic adjectives (e.g., use "weathered" or "jagged" instead of "very old" or "rough").
+* **Forbidden Words:** "Particularly," "very," "really," "have to say," "she" (when referring to locations/countries).
 
-## 4. 词汇与表达禁区
-- **避免**：特别、非常、真是、不得不说、她（指代地名）。
-- **避免**：逻辑连接词（如“这就是为什么……”、“基于此……”、“换句话说……”）。
+## 4. Blog Summary Guidelines
+* **Constraint:** Roughly around 40 words. Clear and concise.
+* **Objective:** Capture the reader's interest. 
+* **Content:** No rigid formula. Focus on a specific highlight, or provide a straightforward account of events. It does not need to cover every detail of the post.
